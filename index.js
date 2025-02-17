@@ -17,6 +17,7 @@
 var extend = require('extend')
 var cookies = require('./lib/cookies')
 var helpers = require('./lib/helpers')
+var Auth = require('./lib/auth') 
 
 var paramsHaveRequestBody = helpers.paramsHaveRequestBody
 
@@ -48,6 +49,25 @@ function request (uri, options, callback) {
 
   if (params.method === 'HEAD' && paramsHaveRequestBody(params)) {
     throw new Error('HTTP HEAD requests MUST NOT include a request body.')
+  }
+
+  if (params.auth || params.bearer) {
+    var auth = new Auth(params)
+    
+    if (params.bearer) {
+      var bearerHeader = auth.bearer(params.bearer, true)
+      if (bearerHeader) {
+        params.headers = params.headers || {}
+        params.headers['Authorization'] = bearerHeader
+      }
+    } else if (params.auth) {
+      var { user, pass, sendImmediately } = params.auth
+      var basicHeader = auth.basic(user, pass, sendImmediately)
+      if (basicHeader) {
+        params.headers = params.headers || {}
+        params.headers['Authorization'] = basicHeader
+      }
+    }
   }
 
   return new request.Request(params)
